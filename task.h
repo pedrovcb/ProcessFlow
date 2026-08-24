@@ -7,6 +7,10 @@ typedef struct {
     char *name;
     char **argv;
     int argc;
+
+    char *inputFile;
+    char *outputFile;
+    int appendMode;
 } Task;
 
 typedef struct {

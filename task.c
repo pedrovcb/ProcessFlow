@@ -11,6 +11,8 @@ void taskStoreInit(TaskStore *store){
 
 static void taskFreeOne(Task *task) {
     free(task->name);
+    free(task->inputFile);
+    free(task->outputFile);
     if (task->argv != NULL) {
         for (int i = 0; i < task->argc; i++) {
             free(task->argv[i]);
@@ -72,6 +74,9 @@ int taskAdd(TaskStore *store, const char *name, char **argv, int argc) {
         }
     }
     task->argv[argc] = NULL;
+    task->inputFile = NULL;
+    task->outputFile = NULL;
+    task->appendMode = 0;
 
     store->count++;
     return 0;
