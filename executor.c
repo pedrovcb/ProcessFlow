@@ -46,5 +46,56 @@ void runSequential(TaskStore *store, char **taskNames, int count){
 }
 
 void runParallel(TaskStore *store, char **taskNames, int count) {
-    //placeholder pra adicionar o runParallel dps
+    pid_t *pids = malloc(count * sizeof(pid_t));
+    if (pids == NULL) {
+        perror("malloc");
+        return;
+    }
+
+    for (int i = 0; i < count; i++) {
+        Task *task = taskFind(store, taskNames[i]);
+        if (task == NULL) {
+            fprintf(stderr, "Erro: tarefa '%s' não encontrada.\n", taskNames[i]);
+            pids[i] = -1;
+            continue;
+        }
+
+        pid_t pid = fork();
+        if (pid < 0) {
+            perror("fork");
+            pids[i] = -1;
+            continue;
+        }
+
+        if (pid == 0) {
+            // processo filho
+            execvp(task->argv[0], task->argv);
+            perror("execvp");
+            exit(EXIT_FAILURE);
+        }
+
+        // processo pai
+        pids[i] = pid;
+    }
+
+
+    for (int i = 0; i < count; i++) {
+        if (pids[i] == -1) {
+            continue;
+        }
+
+        int status;
+        waitpid(pids[i], &status, 0);
+
+        if (WIFEXITED(status)) {
+            int exit_code = WEXITSTATUS(status);
+            if (exit_code != 0) {
+                fprintf(stderr, "Tarefa terminou com código %d.\n", exit_code);
+            }
+        } else if (WIFSIGNALED(status)) {
+            fprintf(stderr, "Tarefa foi finalizada por sinal %d.\n", WTERMSIG(status));
+        }
+    }
+
+    free(pids);
 }
