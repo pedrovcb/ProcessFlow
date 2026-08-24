@@ -4,6 +4,7 @@
 #include "parser.h"
 #include "task.h"
 #include "executor.h"
+#include "redirect.h"
 
 
 void handleTask(TaskStore *store, Command *cmd) {
@@ -39,6 +40,68 @@ void handleRun(TaskStore *store, Command *cmd) {
         runParallel(store, taskNames, taskCount);
     } else {
         fprintf(stderr, "Uso: run <sequential|parallel> <tarefa1> [tarefa2...]\n");
+    }
+}
+
+void handleInput(TaskStore *store, Command *cmd) {
+    if (cmd->argc != 2) {
+        fprintf(stderr, "Uso: input <tarefa> <arquivo>\n");
+        return;
+    }
+
+    Task *task = taskFind(store, cmd->argv[0]);
+    if (task == NULL) {
+        fprintf(stderr, "Erro: tarefa '%s' não encontrada.\n", cmd->argv[0]);
+        return;
+    }
+
+    free(task->inputFile);
+
+    task->inputFile = strdup(cmd->argv[1]);
+    if (task->inputFile == NULL) {
+        perror("strdup");
+    }
+}
+
+void handleOutput(TaskStore *store, Command *cmd) {
+    if (cmd->argc != 2) {
+        fprintf(stderr, "Uso: output <tarefa> <arquivo>\n");
+        return;
+    }
+
+    Task *task = taskFind(store, cmd->argv[0]);
+    if (task == NULL) {
+        fprintf(stderr, "Erro: tarefa '%s' não encontrada.\n", cmd->argv[0]);
+        return;
+    }
+
+    free(task->outputFile);
+
+    task->outputFile = strdup(cmd->argv[1]);
+    task->appendMode = 0;
+    if (task->outputFile == NULL) {
+        perror("strdup");
+    }
+}
+
+void handleAppend(TaskStore *store, Command *cmd) {
+    if (cmd->argc != 2) {
+        fprintf(stderr, "Uso: append <tarefa> <arquivo>\n");
+        return;
+    }
+
+    Task *task = taskFind(store, cmd->argv[0]);
+    if (task == NULL) {
+        fprintf(stderr, "Erro: tarefa '%s' não encontrada.\n", cmd->argv[0]);
+        return;
+    }
+
+    free(task->outputFile);
+
+    task->outputFile = strdup(cmd->argv[1]);
+    task->appendMode = 1;
+    if (task->outputFile == NULL) {
+        perror("strdup");
     }
 }
 
@@ -78,6 +141,15 @@ void loopInterativo(TaskStore *store) {
                 break;
             case CMD_RUN:
                 handleRun(store, &cmd);
+                break;
+            case CMD_INPUT:
+                handleInput(store, &cmd);
+                break;
+            case CMD_OUTPUT:
+                handleOutput(store, &cmd);
+                break;
+            case CMD_APPEND:
+                handleAppend(store, &cmd);
                 break;
             default:
                 fprintf(stderr, "Comando desconhecido: %s\n", cmd.argv[0]);
@@ -124,6 +196,15 @@ void loopWorkflow(TaskStore *store, const char *filename) {
                 break;
             case CMD_RUN:
                 handleRun(store, &cmd);
+                break;
+            case CMD_INPUT:
+                handleInput(store, &cmd);
+                break;
+            case CMD_OUTPUT:
+                handleOutput(store, &cmd);
+                break;
+            case CMD_APPEND:
+                handleAppend(store, &cmd);
                 break;
             default:
                 fprintf(stderr, "Comando desconhecido: %s\n", cmd.argv[0]);
