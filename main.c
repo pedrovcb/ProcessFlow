@@ -6,7 +6,10 @@
 #include "executor.h"
 #include "redirect.h"
 #include "pipe.h"
+#include "jobs.h"
 
+void handleStart(TaskStore *store, JobTable *jobs, Command *cmd);
+void handleWait(JobTable *jobs, Command *cmd);
 
 void handleTask(TaskStore *store, Command *cmd) {
     if (cmd->argc < 2) {
@@ -59,7 +62,6 @@ void handleInput(TaskStore *store, Command *cmd) {
     }
 
     free(task->inputFile);
-
     task->inputFile = strdup(cmd->argv[1]);
     if (task->inputFile == NULL) {
         perror("strdup");
@@ -79,7 +81,6 @@ void handleOutput(TaskStore *store, Command *cmd) {
     }
 
     free(task->outputFile);
-
     task->outputFile = strdup(cmd->argv[1]);
     task->appendMode = 0;
     if (task->outputFile == NULL) {
@@ -100,7 +101,6 @@ void handleAppend(TaskStore *store, Command *cmd) {
     }
 
     free(task->outputFile);
-
     task->outputFile = strdup(cmd->argv[1]);
     task->appendMode = 1;
     if (task->outputFile == NULL) {
@@ -108,7 +108,58 @@ void handleAppend(TaskStore *store, Command *cmd) {
     }
 }
 
-void loopInterativo(TaskStore *store) {
+
+void handleStart(TaskStore *store, JobTable *jobs, Command *cmd) {
+    if (cmd->argc != 1) {
+        fprintf(stderr, "Uso: start <tarefa>\n");
+        return;
+    }
+
+    Task *task = taskFind(store, cmd->argv[0]);
+    if (task == NULL) {
+        fprintf(stderr, "Erro: tarefa '%s' não encontrada.\n", cmd->argv[0]);
+        return;
+    }
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        perror("fork");
+        return;
+    }
+
+    if (pid == 0) {
+        if (applyRedirect(task) == -1) {
+            exit(EXIT_FAILURE);
+        }
+        execvp(task->argv[0], task->argv);
+        perror("execvp");
+        exit(EXIT_FAILURE);
+    }
+
+    int jobId = jobAdd(jobs, pid, task->name);
+    printf("[%d] %d\n", jobId, pid);
+
+    jobUpdateStatus(jobs);
+}
+
+
+void handleWait(JobTable *jobs, Command *cmd) {
+    if (cmd->argc != 1) {
+        fprintf(stderr, "Uso: wait <jobId>\n");
+        return;
+    }
+
+    int jobId = atoi(cmd->argv[0]);
+    if (jobId <= 0) {
+        fprintf(stderr, "Erro: jobId inválido.\n");
+        return;
+    }
+
+    jobWait(jobs, jobId);
+    jobUpdateStatus(jobs);
+}
+
+void loopInterativo(TaskStore *store, JobTable *jobs) {
     char line[1024];
 
     while (1) {
@@ -154,6 +205,15 @@ void loopInterativo(TaskStore *store) {
             case CMD_APPEND:
                 handleAppend(store, &cmd);
                 break;
+            case CMD_START:
+                handleStart(store, jobs, &cmd);
+                break;
+            case CMD_JOBS:
+                jobList(jobs);
+                break;
+            case CMD_WAIT:
+                handleWait(jobs, &cmd);
+                break;
             default:
                 fprintf(stderr, "Comando desconhecido: %s\n", cmd.argv[0]);
                 break;
@@ -163,7 +223,7 @@ void loopInterativo(TaskStore *store) {
     }
 }
 
-void loopWorkflow(TaskStore *store, const char *filename) {
+void loopWorkflow(TaskStore *store, JobTable *jobs, const char *filename) {
     FILE *fp = fopen(filename, "r");
     if (fp == NULL) {
         fprintf(stderr, "Erro: não foi possível abrir o arquivo '%s'\n", filename);
@@ -209,6 +269,15 @@ void loopWorkflow(TaskStore *store, const char *filename) {
             case CMD_APPEND:
                 handleAppend(store, &cmd);
                 break;
+            case CMD_START:
+                handleStart(store, jobs, &cmd);
+                break;
+            case CMD_JOBS:
+                jobList(jobs);
+                break;
+            case CMD_WAIT:
+                handleWait(jobs, &cmd);
+                break;
             default:
                 fprintf(stderr, "Comando desconhecido: %s\n", cmd.argv[0]);
                 break;
@@ -220,20 +289,24 @@ void loopWorkflow(TaskStore *store, const char *filename) {
     fclose(fp);
 }
 
-int main(int argc, char *argv[]){
+int main(int argc, char *argv[]) {
     TaskStore store;
+    JobTable jobs;
     taskStoreInit(&store);
+    jobTableInit(&jobs);
 
-    if(argc == 1){
-        loopInterativo(&store);
-    } else if (argc == 2){
-        loopWorkflow(&store, argv[1]);
-    } else{
+    if (argc == 1) {
+        loopInterativo(&store, &jobs);
+    } else if (argc == 2) {
+        loopWorkflow(&store, &jobs, argv[1]);
+    } else {
         fprintf(stderr, "Uso: %s [arquivo.pf]\n", argv[0]);
         taskStoreFree(&store);
+        jobTableFree(&jobs);
         return EXIT_FAILURE;
     }
 
     taskStoreFree(&store);
+    jobTableFree(&jobs);
     return EXIT_SUCCESS;
 }
