@@ -64,6 +64,14 @@ void runPipe(TaskStore *store, char **taskNames, int count) {
                 close(pipes[j][1]);
             }
 
+            if (store->workdir != NULL) {
+                if (chdir(store->workdir) != 0) {
+                    perror("chdir");
+                    exit(EXIT_FAILURE);
+                }
+            }
+
+
             if (i > 0) {
                 dup2(pipes[i - 1][0], STDIN_FILENO);
             }

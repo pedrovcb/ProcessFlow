@@ -17,6 +17,7 @@ typedef struct {
     Task *tasks;
     int count;
     int capacity;
+    char *workdir;
 } TaskStore;
 
 void taskStoreInit(TaskStore *store);

@@ -22,6 +22,15 @@ void runSequential(TaskStore *store, char **taskNames, int count){
 
         if (pid == 0) {
             // processo filho
+
+            if (store->workdir != NULL) {
+                if (chdir(store->workdir) != 0) {
+                    perror("chdir");
+                    exit(EXIT_FAILURE);
+                }
+            }
+
+
             if (applyRedirect(task) == -1) {
                 exit(EXIT_FAILURE);
             }
@@ -73,6 +82,14 @@ void runParallel(TaskStore *store, char **taskNames, int count) {
 
         if (pid == 0) {
             // processo filho
+
+            if (store->workdir != NULL) {
+                if (chdir(store->workdir) != 0) {
+                    perror("chdir");
+                    exit(EXIT_FAILURE);
+                }
+            }
+
             if(applyRedirect(task) == -1){
                 exit(EXIT_FAILURE);
             }

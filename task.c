@@ -7,6 +7,7 @@ void taskStoreInit(TaskStore *store){
     store->tasks = NULL;
     store->count = 0;
     store->capacity = 0;
+    store->workdir = NULL;
 }
 
 static void taskFreeOne(Task *task) {
@@ -26,6 +27,7 @@ void taskStoreFree(TaskStore *store) {
         taskFreeOne(&store->tasks[i]);
     }
     free(store->tasks);
+    free(store->workdir);
     taskStoreInit(store);
 }
 

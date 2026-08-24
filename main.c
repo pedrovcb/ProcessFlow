@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include "parser.h"
 #include "task.h"
 #include "executor.h"
@@ -8,8 +9,76 @@
 #include "pipe.h"
 #include "jobs.h"
 
-void handleStart(TaskStore *store, JobTable *jobs, Command *cmd);
-void handleWait(JobTable *jobs, Command *cmd);
+void handleStart(TaskStore *store, JobTable *jobs, Command *cmd) {
+    if (cmd->argc != 1) {
+        fprintf(stderr, "Uso: start <tarefa>\n");
+        return;
+    }
+
+    Task *task = taskFind(store, cmd->argv[0]);
+    if (task == NULL) {
+        fprintf(stderr, "Erro: tarefa '%s' não encontrada.\n", cmd->argv[0]);
+        return;
+    }
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        perror("fork");
+        return;
+    }
+
+    if (pid == 0) {
+        if (store->workdir != NULL) {
+        chdir(store->workdir);
+        }
+        if (applyRedirect(task) == -1) {
+            exit(EXIT_FAILURE);
+        }
+        execvp(task->argv[0], task->argv);
+        perror("execvp");
+        exit(EXIT_FAILURE);
+    }
+
+    int jobId = jobAdd(jobs, pid, task->name);
+    printf("[%d] %d\n", jobId, pid);
+
+    jobUpdateStatus(jobs);
+}
+
+void handleWait(JobTable *jobs, Command *cmd) {
+    if (cmd->argc != 1) {
+        fprintf(stderr, "Uso: wait <jobId>\n");
+        return;
+    }
+
+    int jobId = atoi(cmd->argv[0]);
+    if (jobId <= 0) {
+        fprintf(stderr, "Erro: jobId inválido.\n");
+        return;
+    }
+
+    jobWait(jobs, jobId);
+    jobUpdateStatus(jobs);
+}
+
+void handleWorkdir(TaskStore *store, Command *cmd) {
+    if (cmd->argc != 1) {
+        fprintf(stderr, "Uso: workdir <diretório>\n");
+        return;
+    }
+
+    struct stat st;
+    if (stat(cmd->argv[0], &st) != 0 || !S_ISDIR(st.st_mode)) {
+        fprintf(stderr, "Erro: diretório '%s' não existe ou não é um diretório.\n", cmd->argv[0]);
+        return;
+    }
+
+    free(store->workdir);
+    store->workdir = strdup(cmd->argv[0]);
+    if (store->workdir == NULL) {
+        perror("strdup");
+    }
+}
 
 void handleTask(TaskStore *store, Command *cmd) {
     if (cmd->argc < 2) {
@@ -108,57 +177,6 @@ void handleAppend(TaskStore *store, Command *cmd) {
     }
 }
 
-
-void handleStart(TaskStore *store, JobTable *jobs, Command *cmd) {
-    if (cmd->argc != 1) {
-        fprintf(stderr, "Uso: start <tarefa>\n");
-        return;
-    }
-
-    Task *task = taskFind(store, cmd->argv[0]);
-    if (task == NULL) {
-        fprintf(stderr, "Erro: tarefa '%s' não encontrada.\n", cmd->argv[0]);
-        return;
-    }
-
-    pid_t pid = fork();
-    if (pid < 0) {
-        perror("fork");
-        return;
-    }
-
-    if (pid == 0) {
-        if (applyRedirect(task) == -1) {
-            exit(EXIT_FAILURE);
-        }
-        execvp(task->argv[0], task->argv);
-        perror("execvp");
-        exit(EXIT_FAILURE);
-    }
-
-    int jobId = jobAdd(jobs, pid, task->name);
-    printf("[%d] %d\n", jobId, pid);
-
-    jobUpdateStatus(jobs);
-}
-
-
-void handleWait(JobTable *jobs, Command *cmd) {
-    if (cmd->argc != 1) {
-        fprintf(stderr, "Uso: wait <jobId>\n");
-        return;
-    }
-
-    int jobId = atoi(cmd->argv[0]);
-    if (jobId <= 0) {
-        fprintf(stderr, "Erro: jobId inválido.\n");
-        return;
-    }
-
-    jobWait(jobs, jobId);
-    jobUpdateStatus(jobs);
-}
-
 void loopInterativo(TaskStore *store, JobTable *jobs) {
     char line[1024];
 
@@ -190,6 +208,9 @@ void loopInterativo(TaskStore *store, JobTable *jobs) {
         }
 
         switch (cmd.type) {
+            case CMD_WORKDIR:
+                handleWorkdir(store, &cmd);
+                break;
             case CMD_TASK:
                 handleTask(store, &cmd);
                 break;
@@ -254,6 +275,9 @@ void loopWorkflow(TaskStore *store, JobTable *jobs, const char *filename) {
         }
 
         switch (cmd.type) {
+            case CMD_WORKDIR:
+                handleWorkdir(store, &cmd);
+                break;
             case CMD_TASK:
                 handleTask(store, &cmd);
                 break;
