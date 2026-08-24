@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <errno.h>
 #include "executor.h"
+#include "redirect.h"
 
 void runSequential(TaskStore *store, char **taskNames, int count){
     for (int i = 0; i < count; i++) {
