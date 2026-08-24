@@ -5,6 +5,7 @@
 #include "task.h"
 #include "executor.h"
 #include "redirect.h"
+#include "pipe.h"
 
 
 void handleTask(TaskStore *store, Command *cmd) {
@@ -26,7 +27,7 @@ void handleTask(TaskStore *store, Command *cmd) {
 
 void handleRun(TaskStore *store, Command *cmd) {
     if (cmd->argc < 2) {
-        fprintf(stderr, "Uso: run <sequential|parallel> <tarefa1> [tarefa2...]\n");
+        fprintf(stderr, "Uso: run <sequential|parallel|pipe> <tarefa1> [tarefa2...]\n");
         return;
     }
 
@@ -38,8 +39,10 @@ void handleRun(TaskStore *store, Command *cmd) {
         runSequential(store, taskNames, taskCount);
     } else if (strcmp(mode, "parallel") == 0) {
         runParallel(store, taskNames, taskCount);
+    } else if (strcmp(mode, "pipe") == 0) {
+        runPipe(store, taskNames, taskCount);
     } else {
-        fprintf(stderr, "Uso: run <sequential|parallel> <tarefa1> [tarefa2...]\n");
+        fprintf(stderr, "Uso: run <sequential|parallel|pipe> <tarefa1> [tarefa2...]\n");
     }
 }
 
