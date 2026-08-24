@@ -21,6 +21,9 @@ void runSequential(TaskStore *store, char **taskNames, int count){
 
         if (pid == 0) {
             // processo filho
+            if (applyRedirect(task) == -1) {
+                exit(EXIT_FAILURE);
+            }
             execvp(task->argv[0], task->argv);
             perror("execvp");
             exit(EXIT_FAILURE);
@@ -69,6 +72,9 @@ void runParallel(TaskStore *store, char **taskNames, int count) {
 
         if (pid == 0) {
             // processo filho
+            if(applyRedirect(task) == -1){
+                exit(EXIT_FAILURE);
+            }
             execvp(task->argv[0], task->argv);
             perror("execvp");
             exit(EXIT_FAILURE);
