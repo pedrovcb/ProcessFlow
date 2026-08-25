@@ -99,14 +99,27 @@ void handleTask(TaskStore *store, Command *cmd) {
 }
 
 void handleRun(TaskStore *store, Command *cmd) {
-    if (cmd->argc < 2) {
+    if (cmd->argc < 1) {
         fprintf(stderr, "Uso: run <sequential|parallel|pipe> <tarefa1> [tarefa2...]\n");
         return;
     }
 
     char *mode = cmd->argv[0];
-    char **taskNames = &cmd->argv[1];
-    int taskCount = cmd->argc - 1;
+    char **taskNames;
+    int taskCount;
+
+    if (strcmp(mode, "sequential") == 0 || strcmp(mode, "parallel") == 0 || strcmp(mode, "pipe") == 0) {
+        if (cmd->argc < 2) {
+            fprintf(stderr, "Uso: run <sequential|parallel|pipe> <tarefa1> [tarefa2...]\n");
+            return;
+        }
+        taskNames = &cmd->argv[1];
+        taskCount = cmd->argc - 1;
+    } else {
+        taskNames = &cmd->argv[0];
+        taskCount = cmd->argc;
+        mode = "sequential";
+    }
 
     if (strcmp(mode, "sequential") == 0) {
         runSequential(store, taskNames, taskCount);
@@ -255,7 +268,8 @@ void loopWorkflow(TaskStore *store, JobTable *jobs, const char *filename) {
     char line[1024];
 
     while (fgets(line, sizeof(line), fp) != NULL) {
-        printf("%s", line);
+        fprintf(stderr, "%s", line);
+        fflush(stdout);
 
         size_t len = strlen(line);
         if (len > 0 && line[len - 1] == '\n') {

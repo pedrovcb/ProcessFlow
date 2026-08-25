@@ -1,0 +1,8 @@
+task inexistente /bin/programa_que_nao_existe
+run sequential inexistente
+task eco /bin/echo hello
+input eco arquivo_inexistente.txt
+run sequential eco
+workdir /diretorio_inexistente
+run sequential eco
+exit

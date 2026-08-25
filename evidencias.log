@@ -1,0 +1,22 @@
+=== Teste 1: Sequential ===
+PASS
+
+=== Teste 2: Pipe ===
+PASS
+
+=== Teste 3: Redirecionamento ===
+PASS
+
+=== Teste 4: Background ===
+PASS
+
+=== Teste 5: Erros ===
+PASS
+
+=== Teste 6: Workflow sem exit ===
+PASS
+
+=== Teste 7: Exit Code !== 0 ===
+PASS
+
+Todos os testes concluídos.

@@ -33,6 +33,27 @@ test: $(TARGET)
 	@diff /tmp/teste3-out.txt $(TEST_DIR)/teste3/teste3-saida.txt && echo "PASS" || echo "FAIL"
 	@rm -f /tmp/teste3-out.txt saida.txt
 	@echo ""
+	@echo "=== Teste 4: Background ==="
+	@cd $(TEST_DIR)/teste-background && stdbuf -o0 -e0 ../../$(TARGET) entrada.txt > /tmp/teste-bg-out.txt 2>&1
+	@sed -i 's/\[1\] [0-9]*/[1] <PID>/g' /tmp/teste-bg-out.txt
+	@diff /tmp/teste-bg-out.txt $(TEST_DIR)/teste-background/saida.txt && echo "PASS" || echo "FAIL"
+	@rm -f /tmp/teste-bg-out.txt
+	@echo ""
+	@echo "=== Teste 5: Erros ==="
+	@cd $(TEST_DIR)/teste-erros && stdbuf -o0 -e0 ../../$(TARGET) entrada.txt > /tmp/teste-err-out.txt 2>&1
+	@diff /tmp/teste-err-out.txt $(TEST_DIR)/teste-erros/saida.txt && echo "PASS" || echo "FAIL"
+	@rm -f /tmp/teste-err-out.txt
+	@echo ""
+	@echo "=== Teste 6: Workflow sem exit ==="
+	@cd $(TEST_DIR)/teste-workflow-sem-exit && stdbuf -o0 -e0 ../../$(TARGET) entrada.txt > /tmp/teste-wf-out.txt 2>&1
+	@diff /tmp/teste-wf-out.txt $(TEST_DIR)/teste-workflow-sem-exit/saida.txt && echo "PASS" || echo "FAIL"
+	@rm -f /tmp/teste-wf-out.txt
+	@echo ""
+	@echo "=== Teste 7: Exit Code !== 0 ==="
+	@cd $(TEST_DIR)/teste-exit-code && stdbuf -o0 -e0 ../../$(TARGET) entrada.txt > /tmp/teste-ec-out.txt 2>&1
+	@diff /tmp/teste-ec-out.txt $(TEST_DIR)/teste-exit-code/saida.txt && echo "PASS" || echo "FAIL"
+	@rm -f /tmp/teste-ec-out.txt
+	@echo ""
 	@echo "Todos os testes concluídos."
 
 run: $(TARGET)

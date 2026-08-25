@@ -1,0 +1,3 @@
+task erro /bin/false
+run sequential erro
+exit

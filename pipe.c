@@ -58,12 +58,6 @@ void runPipe(TaskStore *store, char **taskNames, int count) {
 
         if (pid == 0) {
 
-            // processo filho
-            for (int j = 0; j < count - 1; j++) {
-                close(pipes[j][0]);
-                close(pipes[j][1]);
-            }
-
             if (store->workdir != NULL) {
                 if (chdir(store->workdir) != 0) {
                     perror("chdir");
@@ -96,6 +90,11 @@ void runPipe(TaskStore *store, char **taskNames, int count) {
                     dup2(fd, STDOUT_FILENO);
                     close(fd);
                 }
+            }
+
+            for (int j = 0; j < count - 1; j++) {
+                close(pipes[j][0]);
+                close(pipes[j][1]);
             }
 
             execvp(task->argv[0], task->argv);
